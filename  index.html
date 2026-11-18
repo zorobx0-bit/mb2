@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>كادر</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&family=Reem+Kufi:wght@600;700&display=swap">
+<style>
+[hidden]{display:none!important}
+img,video{max-width:100%}
+
+/* Layout: محطة مونتاج بعمودين. المعاينة الكبيرة على اليمين (RTL) وصندوق الأدوات بتبويبات على الشمال؛ على الموبايل يتكدسوا. الأحمر الوحيد هو لمبة التسجيل. */
+:root{
+  --bg:#0e1218; --panel:#151a22; --panel-2:#1c222d; --line:#283040;
+  --fg:#e9edf3; --fg-dim:#9aa6b8; --accent:#ff5a47; --accent-fg:#1c0a07;
+  --accent-soft:rgba(255,90,71,.16); --ok:#47c48a; --stage:#0a0d12;
+  --check-a:#222834; --check-b:#1a1f29; --shadow:0 10px 30px rgba(0,0,0,.35);
+  --f-disp:'Reem Kufi','Cairo',system-ui,sans-serif;
+  --f-ui:'Cairo',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#eef1f5; --panel:#ffffff; --panel-2:#f2f4f8; --line:#d8dee8;
+    --fg:#171c24; --fg-dim:#586376; --accent:#d8321f; --accent-fg:#ffffff;
+    --accent-soft:rgba(216,50,31,.1); --ok:#17895a; --stage:#dde2ea;
+    --check-a:#cdd3de; --check-b:#e5e9f0; --shadow:0 8px 24px rgba(30,40,60,.12);
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#eef1f5; --panel:#ffffff; --panel-2:#f2f4f8; --line:#d8dee8;
+  --fg:#171c24; --fg-dim:#586376; --accent:#d8321f; --accent-fg:#ffffff;
+  --accent-soft:rgba(216,50,31,.1); --ok:#17895a; --stage:#dde2ea;
+  --check-a:#cdd3de; --check-b:#e5e9f0; --shadow:0 8px 24px rgba(30,40,60,.12);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:15px/1.6 var(--f-ui); direction:rtl;
+  padding-block:16px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+
+.top{max-width:1240px;margin:0 auto 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-disp);font-size:28px;font-weight:700;line-height:1}
+.brand svg{width:30px;height:30px;color:var(--accent)}
+.tag{margin:0;color:var(--fg-dim);flex:1 1 280px;min-width:0;text-wrap:balance}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600;min-height:40px}
+.btn:hover{border-color:var(--fg-dim)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+.wrap{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:920px){.wrap{grid-template-columns:minmax(0,1fr)}}
+
+.stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:16px;padding:14px;min-height:260px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.stage.drag{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.cv{position:relative;display:inline-block;max-width:100%;line-height:0;border-radius:6px;overflow:hidden}
+.cv.alpha{background:repeating-conic-gradient(var(--check-a) 0% 25%,var(--check-b) 0% 50%) 50%/20px 20px}
+#out{display:block;max-width:100%;max-height:62vh;width:auto;height:auto;touch-action:manipulation}
+.stage.pick #out{cursor:crosshair}
+.banner{position:absolute;inset:10px 10px auto 10px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px;backdrop-filter:blur(6px)}
+.banner label{color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.pickhint{position:absolute;inset:auto 10px 10px 10px;text-align:center;background:var(--accent);color:var(--accent-fg);border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px}
+
+.transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.transport .scrub{flex:1 1 180px;min-width:120px}
+.iconbtn{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);background:var(--panel-2);cursor:pointer;color:var(--fg)}
+.iconbtn:hover{border-color:var(--fg-dim)}
+.time{color:var(--fg-dim);font-size:13px;white-space:nowrap}
+
+.exportbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.exportbar .info{flex:1 1 220px;min-width:0;font-size:13px;color:var(--fg-dim)}
+.exportbar .info b{color:var(--fg)}
+.rec{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-inline-end:6px;vertical-align:middle}
+.exporting .rec{animation:blink 1s steps(2,start) infinite}
+@keyframes blink{50%{opacity:.15}}
+.bar{flex-basis:100%;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent)}
+.msg{min-height:22px;font-size:13px;color:var(--fg-dim);margin:0}
+
+.result{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px}
+.result video{width:100%;max-height:56vh;background:#000;border-radius:8px}
+.result .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.result .row .info{flex:1 1 160px;font-size:13px;color:var(--fg-dim)}
+
+.tools{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
+.tabs{display:flex;gap:2px;overflow-x:auto;padding:8px 8px 0;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{flex:0 0 auto;border:0;background:transparent;color:var(--fg-dim);padding:9px 12px;border-radius:10px 10px 0 0;cursor:pointer;font-weight:600;border-bottom:3px solid transparent}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);background:var(--panel-2)}
+.panel{padding:16px;display:flex;flex-direction:column;gap:16px}
+.panel h2{margin:0;font-family:var(--f-disp);font-size:19px;font-weight:600}
+.note{margin:0;font-size:12.5px;color:var(--fg-dim);border-inline-start:2px solid var(--line);padding-inline-start:10px}
+
+.ctl{display:flex;flex-direction:column;gap:4px}
+.lab{display:flex;justify-content:space-between;gap:8px;font-size:13.5px}
+.lab output{color:var(--fg-dim);font-size:12.5px}
+.grp{display:flex;flex-direction:column;gap:8px}
+.grp>.t{font-size:13px;color:var(--fg-dim);font-weight:600}
+.line{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;direction:ltr;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);margin-top:-7px;border:2px solid var(--panel)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--panel)}
+input[type=color]{width:42px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);cursor:pointer}
+input[type=text]{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px}
+input[type=file].plain{width:100%;font-size:13px;color:var(--fg-dim)}
+
+.sw{position:relative;display:flex;align-items:center;gap:10px;cursor:pointer;min-height:30px}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw .track{flex:0 0 40px;height:22px;border-radius:11px;background:var(--line);position:relative;transition:background .15s}
+.sw .track::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:var(--fg);transition:transform .15s}
+.sw input:checked+.track{background:var(--accent)}
+.sw input:checked+.track::after{transform:translateX(-18px);background:var(--accent-fg)}
+.sw input:focus-visible+.track{outline:2px solid var(--accent);outline-offset:2px}
+
+.seg{display:flex;gap:3px;background:var(--panel-2);padding:3px;border-radius:11px;flex-wrap:wrap}
+.seg button{flex:1 1 0;min-width:48px;border:1px solid transparent;background:transparent;border-radius:8px;padding:6px 8px;cursor:pointer;color:var(--fg-dim);font-weight:600;font-size:13.5px}
+.seg button[aria-checked="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel-2);color:var(--fg);padding:5px 12px;border-radius:999px;cursor:pointer;font-size:13.5px;font-weight:600}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+
+.stat{display:flex;gap:10px;flex-wrap:wrap}
+.stat div{flex:1 1 120px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.stat small{display:block;color:var(--fg-dim);font-size:12px}
+.stat span{font-size:15px}
+
+footer{max-width:1240px;margin:18px auto 0;color:var(--fg-dim);font-size:12.5px;display:grid;gap:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="app" dir="rtl" lang="ar">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11V6a2 2 0 0 1 2-2h5M21 4h5a2 2 0 0 1 2 2v5M28 21v5a2 2 0 0 1-2 2h-5M11 28H6a2 2 0 0 1-2-2v-5"/><circle cx="16" cy="16" r="3.2" fill="currentColor" stroke="none"/></svg>
+      <span>كادر</span>
+    </div>
+    <p class="tag">شيل خلفية الفيديو، كبّر دقته، وظبّط الألوان والقص والإطار. المعالجة كلها بتتم على جهازك والفيديو مبيتبعتش لأي سيرفر.</p>
+    <label class="btn primary" for="file">ارفع فيديو</label>
+    <input id="file" type="file" accept="video/*" hidden>
+  </header>
+
+  <main class="wrap">
+    <section class="col">
+      <div class="stage" id="stage">
+        <div class="cv alpha" id="cv"><canvas id="out" width="1280" height="720" aria-label="معاينة الفيديو"></canvas></div>
+        <div class="banner" id="banner"><span>مثال تجريبي بخلفية خضراء. جرّب الأدوات عليه أو</span><label for="file">ارفع فيديوك</label></div>
+        <div class="pickhint" id="pickhint" hidden>اضغط على الخلفية اللي عايز تشيلها</div>
+      </div>
+
+      <div class="transport">
+        <button class="iconbtn" id="play" type="button" aria-label="تشغيل / إيقاف"></button>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" aria-label="الموضع في الفيديو">
+        <span class="time mono" id="time">00:00.0 / 00:00.0</span>
+        <button class="btn ghost" id="compare" type="button" aria-pressed="false">قارن بالأصلي</button>
+        <button class="btn ghost" id="snap" type="button">لقطة PNG</button>
+      </div>
+
+      <div class="exportbar" id="exportbar">
+        <div class="info"><b><i class="rec"></i>التصدير</b> · الدقة الناتجة <span class="mono" id="dimInfo">1280×720</span>. بيتسجّل بسرعة التشغيل الطبيعية، سيب التبويب مفتوح لحد ما يخلص.</div>
+        <button class="btn ghost" id="cancel" type="button" hidden>إلغاء</button>
+        <button class="btn primary" id="export" type="button">صدّر الفيديو</button>
+        <div class="bar" id="bar" hidden><i id="barfill"></i></div>
+      </div>
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+      <div class="result" id="result" hidden>
+        <video id="resVideo" controls playsinline></video>
+        <div class="row">
+          <span class="info mono" id="resInfo"></span>
+          <button class="btn primary" id="resSave" type="button">احفظ الفيديو</button>
+          <button class="btn ghost" id="resClose" type="button">إغلاق</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="tools" id="tools">
+      <div class="tabs" role="tablist" aria-label="أدوات التعديل">
+        <button class="tab" role="tab" id="t-bg" aria-controls="p-bg" aria-selected="true" type="button">الخلفية</button>
+        <button class="tab" role="tab" id="t-quality" aria-controls="p-quality" aria-selected="false" type="button">الجودة</button>
+        <button class="tab" role="tab" id="t-color" aria-controls="p-color" aria-selected="false" type="button">الألوان</button>
+        <button class="tab" role="tab" id="t-time" aria-controls="p-time" aria-selected="false" type="button">الوقت</button>
+        <button class="tab" role="tab" id="t-frame" aria-controls="p-frame" aria-selected="false" type="button">الإطار</button>
+        <button class="tab" role="tab" id="t-text" aria-controls="p-text" aria-selected="false" type="button">النص</button>
+        <button class="tab" role="tab" id="t-audio" aria-controls="p-audio" aria-selected="false" type="button">الصوت</button>
+      </div>
+
+      <!-- الخلفية -->
+      <div class="panel" id="p-bg" role="tabpanel" aria-labelledby="t-bg">
+        <h2>إزالة الخلفية</h2>
+        <label class="sw"><input type="checkbox" id="keyOn" checked><i class="track"></i><span>شغّل إزالة الخلفية</span></label>
+        <div class="grp">
+          <span class="t">لون الخلفية اللي هتتشال</span>
+          <div class="line">
+            <input type="color" id="keyColor" value="#25b348" aria-label="لون الخلفية">
+            <button class="btn" id="pickBtn" type="button">اختار من الفيديو</button>
+            <button class="btn" id="autoBtn" type="button">تلقائي من الأركان</button>
+          </div>
+        </div>
+        <div class="ctl"><div class="lab"><span>الحساسية</span><output class="mono" id="o_tol">22</output></div><input type="range" id="tol" min="0" max="80" value="22"></div>
+        <div class="ctl"><div class="lab"><span>نعومة الحواف</span><output class="mono" id="o_soft">10</output></div><input type="range" id="soft" min="1" max="50" value="10"></div>
+        <label class="sw"><input type="checkbox" id="spill" checked><i class="track"></i><span>تنظيف انعكاس اللون على الحواف</span></label>
+        <div class="grp">
+          <span class="t">بدل الخلفية بـ</span>
+          <div class="seg" id="bgType" role="radiogroup" aria-label="بديل الخلفية" data-val="grad">
+            <button type="button" role="radio" data-v="alpha" aria-checked="false">شفاف</button>
+            <button type="button" role="radio" data-v="color" aria-checked="false">لون</button>
+            <button type="button" role="radio" data-v="grad" aria-checked="true">تدرج</button>
+            <button type="button" role="radio" data-v="image" aria-checked="false">صورة</button>
+          </div>
+          <div class="line" id="bgColorRow" hidden><input type="color" id="bgColor" value="#14213d" aria-label="لون الخلفية الجديدة"></div>
+          <div class="line" id="bgGradRow"><input type="color" id="g1" value="#1fa2a6" aria-label="أول لون في التدرج"><input type="color" id="g2" value="#14213d" aria-label="تاني لون في التدرج"></div>
+          <div class="line" id="bgImgRow" hidden><input class="plain" type="file" id="bgFile" accept="image/*"></div>
+          <p class="note" id="alphaNote" hidden>الشفاف للمعاينة بس. التصدير بيتم على خلفية سودا لأن الفيديو العادي مبيشيلش الشفافية.</p>
+        </div>
+        <p class="note">الإزالة هنا بتشتغل بالألوان، فهي مناسبة للشاشة الخضراء أو أي خلفية بلون ثابت. فصل الشخص من خلفية عادية بالذكاء الاصطناعي محتاج سيرفر معالجة.</p>
+      </div>
+
+      <!-- الجودة -->
+      <div class="panel" id="p-quality" role="tabpanel" aria-labelledby="t-quality" hidden>
+        <h2>رفع الجودة</h2>
+        <div class="grp">
+          <span class="t">تكبير الدقة</span>
+          <div class="seg" id="scale" role="radiogroup" aria-label="التكبير" data-val="2">
+            <button type="button" role="radio" data-v="1" aria-checked="false">×1</button>
+            <button type="button" role="radio" data-v="1.5" aria-checked="false">×1.5</button>
+            <button type="button" role="radio" data-v="2" aria-checked="true">×2</button>
+          </div>
+        </div>
+        <div class="ctl"><div class="lab"><span>الحدّة</span><output class="mono" id="o_sharp">35</output></div><input type="range" id="sharp" min="0" max="100" value="35"></div>
+        <div class="stat">
+          <div><small>دقة الأصل</small><span class="mono" id="srcInfo">640×360</span></div>
+          <div><small>دقة التصدير</small><span class="mono" id="dimInfo2">1280×720</span></div>
+        </div>
+        <p class="note">التكبير بيستخدم إعادة رسم عالية الجودة مع زيادة حدّة. مش إعادة بناء تفاصيل بالذكاء الاصطناعي. المعاينة بتتصغّر لحد 1280 بكسل عشان السرعة، والتصدير بياخد الدقة كاملة لحد 2560.</p>
+      </div>
+
+      <!-- الألوان -->
+      <div class="panel" id="p-color" role="tabpanel" aria-labelledby="t-color" hidden>
+        <h2>الألوان والفلاتر</h2>
+        <div class="chips" id="presets">
+          <button class="chip" type="button" data-p="orig" aria-pressed="true">الأصلي</button>
+          <button class="chip" type="button" data-p="cine" aria-pressed="false">سينمائي</button>
+          <button class="chip" type="button" data-p="warm" aria-pressed="false">دافئ</button>
+          <button class="chip" type="button" data-p="cool" aria-pressed="false">بارد</button>
+          <button class="chip" type="button" data-p="bw" aria-pressed="false">أبيض وأسود</button>
+          <button class="chip" type="button" data-p="sepia" aria-pressed="false">كلاسيك</button>
+          <button class="chip" type="button" data-p="vivid" aria-pressed="false">حيوي</button>
+        </div>
+        <div class="ctl"><div class="lab"><span>السطوع</span><output class="mono" id="o_bright">0</output></div><input type="range" id="bright" min="-50" max="50" value="0"></div>
+        <div class="ctl"><div class="lab"><span>التباين</span><output class="mono" id="o_contrast">0</output></div><input type="range" id="contrast" min="-50" max="50" value="0"></div>
+        <div class="ctl"><div class="lab"><span>التشبّع</span><output class="mono" id="o_sat">0</output></div><input type="range" id="sat" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lab"><span>الدفء</span><output class="mono" id="o_warm">0</output></div><input type="range" id="warm" min="-50" max="50" value="0"></div>
+        <div class="ctl"><div class="lab"><span>تعتيم الحواف</span><output class="mono" id="o_vig">0</output></div><input type="range" id="vig" min="0" max="100" value="0"></div>
+      </div>
+
+      <!-- الوقت -->
+      <div class="panel" id="p-time" role="tabpanel" aria-labelledby="t-time" hidden>
+        <h2>القص والسرعة</h2>
+        <div class="ctl"><div class="lab"><span>بداية الفيديو</span><output class="mono" id="o_tStart">00:00.0</output></div><input type="range" id="tStart" min="0" max="1000" value="0"></div>
+        <div class="ctl"><div class="lab"><span>نهاية الفيديو</span><output class="mono" id="o_tEnd">00:00.0</output></div><input type="range" id="tEnd" min="0" max="1000" value="1000"></div>
+        <div class="grp">
+          <span class="t">السرعة</span>
+          <div class="seg" id="speed" role="radiogroup" aria-label="السرعة" data-val="1">
+            <button type="button" role="radio" data-v="0.5" aria-checked="false">0.5×</button>
+            <button type="button" role="radio" data-v="0.75" aria-checked="false">0.75×</button>
+            <button type="button" role="radio" data-v="1" aria-checked="true">1×</button>
+            <button type="button" role="radio" data-v="1.5" aria-checked="false">1.5×</button>
+            <button type="button" role="radio" data-v="2" aria-checked="false">2×</button>
+          </div>
+        </div>
+        <label class="sw"><input type="checkbox" id="loop"><i class="track"></i><span>كرّر الجزء المقصوص في المعاينة</span></label>
+        <p class="note">القص والسرعة بيتطبقوا على التصدير كمان. مع فيديو تجريبي الأداة دي بتتفعّل بعد ما ترفع فيديو.</p>
+      </div>
+
+      <!-- الإطار -->
+      <div class="panel" id="p-frame" role="tabpanel" aria-labelledby="t-frame" hidden>
+        <h2>الإطار والتقريب</h2>
+        <div class="grp">
+          <span class="t">نسبة العرض للطول</span>
+          <div class="seg" id="aspect" role="radiogroup" aria-label="نسبة الإطار" data-val="orig">
+            <button type="button" role="radio" data-v="orig" aria-checked="true">الأصلي</button>
+            <button type="button" role="radio" data-v="16:9" aria-checked="false">16:9</button>
+            <button type="button" role="radio" data-v="9:16" aria-checked="false">9:16</button>
+            <button type="button" role="radio" data-v="1:1" aria-checked="false">1:1</button>
+            <button type="button" role="radio" data-v="4:5" aria-checked="false">4:5</button>
+          </div>
+        </div>
+        <div class="ctl"><div class="lab"><span>التقريب</span><output class="mono" id="o_zoom">100</output></div><input type="range" id="zoom" min="100" max="250" value="100"></div>
+        <div class="ctl"><div class="lab"><span>إزاحة أفقية</span><output class="mono" id="o_px">0</output></div><input type="range" id="px" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lab"><span>إزاحة رأسية</span><output class="mono" id="o_py">0</output></div><input type="range" id="py" min="-100" max="100" value="0"></div>
+        <label class="sw"><input type="checkbox" id="fh"><i class="track"></i><span>اقلب أفقي</span></label>
+        <label class="sw"><input type="checkbox" id="fv"><i class="track"></i><span>اقلب رأسي</span></label>
+        <p class="note">9:16 للريلز والتيك توك، 1:1 للمربع، 4:5 لإنستجرام. الإزاحة بتشتغل لما تقرّب أو تغيّر النسبة.</p>
+      </div>
+
+      <!-- النص -->
+      <div class="panel" id="p-text" role="tabpanel" aria-labelledby="t-text" hidden>
+        <h2>نص على الفيديو</h2>
+        <div class="ctl"><div class="lab"><span>النص</span></div><input type="text" id="textVal" placeholder="اكتب العنوان هنا" maxlength="80"></div>
+        <div class="ctl"><div class="lab"><span>الحجم</span><output class="mono" id="o_tsize">7</output></div><input type="range" id="tsize" min="3" max="16" value="7"></div>
+        <div class="grp">
+          <span class="t">المكان</span>
+          <div class="seg" id="tpos" role="radiogroup" aria-label="مكان النص" data-val="bot">
+            <button type="button" role="radio" data-v="top" aria-checked="false">فوق</button>
+            <button type="button" role="radio" data-v="mid" aria-checked="false">النص</button>
+            <button type="button" role="radio" data-v="bot" aria-checked="true">تحت</button>
+          </div>
+        </div>
+        <div class="line"><input type="color" id="tcolor" value="#ffffff" aria-label="لون النص"><label class="sw"><input type="checkbox" id="tpill" checked><i class="track"></i><span>شريط خلف النص</span></label></div>
+      </div>
+
+      <!-- الصوت -->
+      <div class="panel" id="p-audio" role="tabpanel" aria-labelledby="t-audio" hidden>
+        <h2>الصوت</h2>
+        <div class="ctl"><div class="lab"><span>مستوى الصوت</span><output class="mono" id="o_vol">100</output></div><input type="range" id="vol" min="0" max="200" value="100"></div>
+        <label class="sw"><input type="checkbox" id="mute"><i class="track"></i><span>اكتم الصوت</span></label>
+        <p class="note">مستوى الصوت والكتم بيتطبقوا على المعاينة والتصدير.</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <span>الإزالة والتكبير والفلاتر بتشتغل بخوارزميات جوه المتصفح، فالأداء بيعتمد على جهازك. الفيديوهات الطويلة أو 4K ممكن تبقى بطيئة.</span>
+    <span>النماذج الذكية الأتقل، زي فصل الشخص من أي خلفية وإعادة بناء التفاصيل، محتاجة سيرفر معالجة ومش متاحة في الصفحة دي.</span>
+  </footer>
+  <video id="vid" playsinline preload="auto" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var out=$('out'), octx=out.getContext('2d');
+var work=document.createElement('canvas'), wctx=work.getContext('2d',{willReadFrequently:true});
+var sample=document.createElement('canvas'); sample.width=640; sample.height=360;
+var sctx=sample.getContext('2d');
+var video=$('vid');
+var ASP={'16:9':16/9,'9:16':9/16,'1:1':1,'4:5':4/5};
+var P={mono:0,sepia:0};
+var mode='sample', dirty=true, comparing=false, pickReq=null, pickMode=false;
+var objUrl=null, fileName='', bgImg=null, bgImgUrl=null, sbuf=null;
+var exporting=false, finishing=false, exportCancelled=false, rec=null, chunks=[], exportMime='';
+var resUrl=null, resBlob=null, resExt='webm', dl=null;
+var scrubbing=false, lastUi=0;
+
+function hex2rgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function rgb2hex(r,g,b){return '#'+[r,g,b].map(function(v){return Math.round(v).toString(16).padStart(2,'0')}).join('')}
+function fmt(t){if(!isFinite(t)||t<0)t=0;var m=Math.floor(t/60),s=t-m*60;return String(m).padStart(2,'0')+':'+(s<10?'0':'')+s.toFixed(1)}
+function msg(t){$('msg').textContent=t||''}
+function segVal(id){return $(id).dataset.val}
+function setSeg(id,v){var s=$(id);s.dataset.val=v;s.querySelectorAll('button').forEach(function(b){b.setAttribute('aria-checked',String(b.dataset.v===v))})}
+
+var ICON_PLAY='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
+var ICON_PAUSE='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="5" width="4.5" height="14" rx="1" fill="currentColor"/><rect x="13.5" y="5" width="4.5" height="14" rx="1" fill="currentColor"/></svg>';
+$('play').innerHTML=ICON_PAUSE;
+
+/* ---------- قراءة الإعدادات ---------- */
+function read(){
+  P.keyOn=$('keyOn').checked;
+  var k=hex2rgb($('keyColor').value); P.kr=k[0];P.kg=k[1];P.kb=k[2];
+  P.tol=+$('tol').value/100; P.soft=+$('soft').value/100; P.spill=$('spill').checked;
+  P.bgType=segVal('bgType'); P.bgColor=$('bgColor').value; P.g1=$('g1').value; P.g2=$('g2').value;
+  P.scale=+segVal('scale'); P.sharp=+$('sharp').value/100;
+  P.bright=+$('bright').value/100; P.contrast=+$('contrast').value/100; P.sat=+$('sat').value/100;
+  P.warm=+$('warm').value/50; P.vig=+$('vig').value/100;
+  P.start=+$('tStart').value/1000; P.end=+$('tEnd').value/1000; P.speed=+segVal('speed'); P.loop=$('loop').checked;
+  P.aspect=segVal('aspect'); P.fh=$('fh').checked; P.fv=$('fv').checked;
+  P.zoom=+$('zoom').value/100; P.px=+$('px').value/100; P.py=+$('py').value/100;
+  P.text=$('textVal').value.trim(); P.tsize=+$('tsize').value/100; P.tcolor=$('tcolor').value; P.tpos=segVal('tpos'); P.tpill=$('tpill').checked;
+  P.vol=+$('vol').value/100; P.mute=$('mute').checked;
+  var d=calcDims(true); var t=d[0]?d[0]+'×'+d[1]:'—';
+  $('dimInfo').textContent=t; $('dimInfo2').textContent=t;
+  $('bgColorRow').hidden=P.bgType!=='color';
+  $('bgGradRow').hidden=P.bgType!=='grad';
+  $('bgImgRow').hidden=P.bgType!=='image';
+  $('alphaNote').hidden=P.bgType!=='alpha';
+  if(mode==='video'){video.playbackRate=P.speed;}
+  applyAudio();
+  dirty=true;
+}
+function updateOutputs(){
+  document.querySelectorAll('input[type=range]').forEach(function(r){
+    var o=$('o_'+r.id); if(!o) return;
+    if(r.id==='tStart'||r.id==='tEnd'){o.textContent=fmt((+r.value/1000)*(mode==='video'?video.duration:0));}
+    else o.textContent=r.value;
+  });
+}
+
+/* ---------- الأبعاد ---------- */
+function srcDims(){return mode==='video'?[video.videoWidth,video.videoHeight]:[640,360]}
+function calcDims(isExp){
+  var d=srcDims(), sw=d[0], sh=d[1]; if(!sw||!sh) return [0,0];
+  var R=P.aspect==='orig'||!P.aspect?sw/sh:ASP[P.aspect], w, h;
+  if(R>=sw/sh){w=sw;h=sw/R}else{h=sh;w=sh*R}
+  var sc=P.scale||1; w*=sc; h*=sc;
+  var cap=isExp?2560:1280, m=Math.max(w,h);
+  if(m>cap){w*=cap/m;h*=cap/m}
+  return [Math.max(2,Math.round(w/2)*2),Math.max(2,Math.round(h/2)*2)];
+}
+
+/* ---------- المثال التجريبي ---------- */
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function drawSample(t){
+  var c=sctx,W=640,H=360;
+  var g=c.createRadialGradient(W*.5,H*.35,30,W*.5,H*.55,W*.65);
+  g.addColorStop(0,'#2fd05a');g.addColorStop(1,'#1c9a3d');
+  c.fillStyle=g;c.fillRect(0,0,W,H);
+  var cx=W/2+Math.sin(t*.8)*90, sway=Math.sin(t*1.7)*10, bob=Math.sin(t*3.4)*2.5;
+  c.fillStyle='#ff6b3d';rr(c,cx-78+sway*.3,205+bob,156,200,56);c.fill();
+  c.fillStyle='#ffd166';rr(c,cx-78+sway*.3,262+bob,156,16,8);c.fill();
+  c.fillStyle='#e3b48c';rr(c,cx-14+sway*.5,172+bob,28,40,10);c.fill();
+  var sx=cx+66+sway*.3, sy=228+bob, ang=-1.1+Math.sin(t*5)*.35;
+  c.strokeStyle='#ff6b3d';c.lineWidth=34;c.lineCap='round';
+  c.beginPath();c.moveTo(sx,sy);c.lineTo(sx+Math.cos(ang)*90,sy+Math.sin(ang)*90);c.stroke();
+  c.fillStyle='#f1c7a0';c.beginPath();c.arc(sx+Math.cos(ang)*104,sy+Math.sin(ang)*104,17,0,7);c.fill();
+  var hx=cx+sway*.6, hy=130+bob;
+  c.fillStyle='#f1c7a0';c.beginPath();c.ellipse(hx,hy,42,50,0,0,7);c.fill();
+  c.fillStyle='#1f1410';c.beginPath();c.ellipse(hx,hy-14,46,40,0,Math.PI,0);c.fill();
+  c.beginPath();c.arc(hx-15,hy+2,4,0,7);c.fill();
+  c.beginPath();c.arc(hx+15,hy+2,4,0,7);c.fill();
+  c.strokeStyle='#8a4b3a';c.lineWidth=3;c.beginPath();c.arc(hx,hy+14,14,.15*Math.PI,.85*Math.PI);c.stroke();
+}
+
+/* ---------- معالجة البكسلات ---------- */
+function needPix(){
+  return P.keyOn||P.sharp>0.01||P.bright||P.contrast||P.sat||P.warm||P.mono||P.sepia;
+}
+function sharpen(d,W,H,s){
+  if(!sbuf||sbuf.length!==d.length) sbuf=new Uint8ClampedArray(d.length);
+  var k=s*0.9,c=1+4*k,row=W*4;
+  sbuf.set(d);
+  for(var y=1;y<H-1;y++){
+    var i=y*row+4;
+    for(var x=1;x<W-1;x++,i+=4){
+      sbuf[i]=c*d[i]-k*(d[i-4]+d[i+4]+d[i-row]+d[i+row]);
+      sbuf[i+1]=c*d[i+1]-k*(d[i-3]+d[i+5]+d[i+1-row]+d[i+1+row]);
+      sbuf[i+2]=c*d[i+2]-k*(d[i-2]+d[i+6]+d[i+2-row]+d[i+2+row]);
+    }
+  }
+  return sbuf;
+}
+function process(d,W,H){
+  var src=d;
+  if(P.sharp>0.01) src=sharpen(d,W,H,P.sharp);
+  var n=W*H*4, br=P.bright*255, f=1+P.contrast*1.2, sa=1+P.sat, wm=P.warm*40;
+  var kr=P.kr,kg=P.kg,kb=P.kb, tol=P.tol, soft=Math.max(P.soft,0.001), keyOn=P.keyOn;
+  var kd=-1;
+  if(P.spill){
+    var m=Math.max(kr,kg,kb), idx=kr===m?0:(kg===m?1:2), oth=(kr+kg+kb-m)/2;
+    if(m-oth>40) kd=idx;
+  }
+  var mono=P.mono, sep=P.sepia, doCol=P.bright||P.contrast||P.sat||P.warm||mono||sep;
+  for(var i=0;i<n;i+=4){
+    var r=src[i],g=src[i+1],b=src[i+2],a=255;
+    if(keyOn){
+      var dr=r-kr,dg=g-kg,db=b-kb;
+      var dist=Math.sqrt(dr*dr+dg*dg+db*db)/441.67;
+      var t=(dist-tol)/soft;
+      if(t<=0){d[i+3]=0;continue}
+      if(t<1){a=255*t*t*(3-2*t)}
+      if(kd>=0){
+        if(kd===1){var mm=(r+b)*.5;if(g>mm)g=mm+(g-mm)*.3}
+        else if(kd===0){var m1=(g+b)*.5;if(r>m1)r=m1+(r-m1)*.3}
+        else{var m2=(r+g)*.5;if(b>m2)b=m2+(b-m2)*.3}
+      }
+    }
+    if(doCol){
+      var l=.299*r+.587*g+.114*b;
+      r=l+(r-l)*sa;g=l+(g-l)*sa;b=l+(b-l)*sa;
+      r=(r-128)*f+128+br+wm;g=(g-128)*f+128+br;b=(b-128)*f+128+br-wm;
+      if(mono>0){var l2=.299*r+.587*g+.114*b;r+=(l2-r)*mono;g+=(l2-g)*mono;b+=(l2-b)*mono}
+      if(sep>0){
+        var sr=.393*r+.769*g+.189*b,sg=.349*r+.686*g+.168*b,sb=.272*r+.534*g+.131*b;
+        r+=(sr-r)*sep;g+=(sg-g)*sep;b+=(sb-b)*sep;
+      }
+    }
+    d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=a;
+  }
+}
+
+/* ---------- الرسم ---------- */
+function doPick(W,H){
+  var pts;
+  if(pickReq==='corners'){
+    var s=Math.max(4,Math.round(Math.min(W,H)*.02));
+    pts=[[0,0,s,s],[W-s,0,s,s],[0,H-s,s,s],[W-s,H-s,s,s]];
+  }else{
+    var s2=7;
+    pts=[[Math.max(0,Math.min(W-s2,Math.round(pickReq.x-3))),Math.max(0,Math.min(H-s2,Math.round(pickReq.y-3))),s2,s2]];
+  }
+  var r=0,g=0,b=0,n=0;
+  pts.forEach(function(p){
+    var d=wctx.getImageData(p[0],p[1],p[2],p[3]).data;
+    for(var i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];n++}
+  });
+  if(n){$('keyColor').value=rgb2hex(r/n,g/n,b/n);$('keyOn').checked=true}
+  pickReq=null;setPick(false);read();
+}
+function drawBg(W,H){
+  octx.globalCompositeOperation='source-over';
+  if(P.bgType==='color'){octx.fillStyle=P.bgColor;octx.fillRect(0,0,W,H)}
+  else if(P.bgType==='grad'){var g=octx.createLinearGradient(0,0,W,H);g.addColorStop(0,P.g1);g.addColorStop(1,P.g2);octx.fillStyle=g;octx.fillRect(0,0,W,H)}
+  else if(P.bgType==='image'){
+    if(bgImg&&bgImg.naturalWidth){var cs=Math.max(W/bgImg.naturalWidth,H/bgImg.naturalHeight),dw=bgImg.naturalWidth*cs,dh=bgImg.naturalHeight*cs;octx.drawImage(bgImg,(W-dw)/2,(H-dh)/2,dw,dh)}
+    else{octx.fillStyle='#222';octx.fillRect(0,0,W,H)}
+  }else if(exporting){octx.fillStyle='#000';octx.fillRect(0,0,W,H)}
+}
+function render(){
+  if(mode==='sample') drawSample(performance.now()/1000);
+  var d=calcDims(exporting), W=d[0], H=d[1];
+  if(!W) return;
+  if(out.width!==W||out.height!==H){out.width=W;out.height=H;work.width=W;work.height=H;sbuf=null}
+  var sd=srcDims(), sw=sd[0], sh=sd[1], el=mode==='video'?video:sample;
+  wctx.setTransform(1,0,0,1,0,0);
+  wctx.clearRect(0,0,W,H);
+  wctx.imageSmoothingEnabled=true; wctx.imageSmoothingQuality='high';
+  var cs=Math.max(W/sw,H/sh)*P.zoom, dw=sw*cs, dh=sh*cs;
+  var ox=P.px*Math.max(0,dw-W)/2, oy=P.py*Math.max(0,dh-H)/2;
+  wctx.translate(W/2,H/2); wctx.scale(P.fh?-1:1,P.fv?-1:1);
+  try{wctx.drawImage(el,-dw/2+ox,-dh/2+oy,dw,dh)}catch(e){}
+  wctx.setTransform(1,0,0,1,0,0);
+  if(pickReq) doPick(W,H);
+  if(comparing&&!exporting){octx.clearRect(0,0,W,H);octx.drawImage(work,0,0);dirty=false;return}
+  if(needPix()){
+    var img=wctx.getImageData(0,0,W,H);
+    process(img.data,W,H);
+    wctx.putImageData(img,0,0);
+  }
+  octx.clearRect(0,0,W,H);
+  drawBg(W,H);
+  octx.drawImage(work,0,0);
+  if(P.vig>0){
+    var g=octx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75);
+    g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,'+(P.vig*.75)+')');
+    octx.fillStyle=g;octx.fillRect(0,0,W,H);
+  }
+  if(P.text){
+    var fs=Math.max(10,Math.round(H*P.tsize));
+    octx.save();
+    octx.font='700 '+fs+'px Cairo, Tahoma, sans-serif';
+    octx.textAlign='center';octx.textBaseline='middle';octx.direction='rtl';
+    var y=P.tpos==='top'?H*.12:(P.tpos==='mid'?H*.5:H*.88);
+    if(P.tpill){
+      var tw=octx.measureText(P.text).width,pad=fs*.5;
+      octx.fillStyle='rgba(0,0,0,.55)';
+      rr(octx,W/2-tw/2-pad,y-fs*.8,tw+pad*2,fs*1.6,fs*.4);octx.fill();
+    }
+    octx.fillStyle=P.tcolor;octx.fillText(P.text,W/2,y);
+    octx.restore();
+  }
+  $('cv').classList.toggle('alpha',P.bgType==='alpha'&&!comparing);
+  dirty=false;
+}
+
+/* ---------- الصوت ---------- */
+var actx=null,gainNode=null,spkGain=null,dest=null;
+function ensureAudio(){
+  if(!actx){
+    try{
+      var AC=window.AudioContext||window.webkitAudioContext;
+      actx=new AC();
+      var s=actx.createMediaElementSource(video);
+      gainNode=actx.createGain();spkGain=actx.createGain();dest=actx.createMediaStreamDestination();
+      s.connect(gainNode);gainNode.connect(spkGain);spkGain.connect(actx.destination);gainNode.connect(dest);
+    }catch(e){actx=null;gainNode=null;spkGain=null;dest=null}
+  }
+  if(actx&&actx.state==='suspended') actx.resume();
+  applyAudio();
+}
+function applyAudio(){
+  var v=P.mute?0:(P.vol==null?1:P.vol);
+  if(gainNode) gainNode.gain.value=v; else video.volume=Math.min(1,v);
+}
+
+/* ---------- تحميل الفيديو ---------- */
+function loadFile(f){
+  if(!/^video\//.test(f.type)&&!/\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name)){msg('الملف ده مش فيديو. جرّب MP4 أو WebM أو MOV.');return}
+  if(objUrl) URL.revokeObjectURL(objUrl);
+  objUrl=URL.createObjectURL(f); fileName=f.name;
+  video.src=objUrl; video.load();
+  msg('بنحمّل الفيديو…');
+  ensureAudio();
+}
+$('file').addEventListener('change',function(e){var f=e.target.files&&e.target.files[0];if(f)loadFile(f);e.target.value=''});
+video.addEventListener('loadedmetadata',function(){
+  mode='video';
+  $('tStart').value=0;$('tEnd').value=1000;
+  $('banner').hidden=true;
+  $('srcInfo').textContent=video.videoWidth+'×'+video.videoHeight;
+  P.mode='video'; read(); updateOutputs();
+  video.currentTime=0.01;
+  msg(fileName?'تم تحميل '+fileName:'');
+  setPlayIcon();
+});
+video.addEventListener('loadeddata',function(){dirty=true});
+video.addEventListener('seeked',function(){dirty=true});
+video.addEventListener('error',function(){if(video.src)msg('المتصفح مش قادر يفتح الفيديو ده. جرّب صيغة تانية زي MP4 (H.264).')});
+video.addEventListener('ended',function(){
+  if(exporting){finishExport(false);return}
+  var dur=video.duration;
+  if(P.loop){video.currentTime=P.start*dur;video.play()}else{video.currentTime=P.start*dur}
+  setPlayIcon();
+});
+['dragenter','dragover'].forEach(function(ev){$('stage').addEventListener(ev,function(e){e.preventDefault();$('stage').classList.add('drag')})});
+['dragleave','drop'].forEach(function(ev){$('stage').addEventListener(ev,function(e){e.preventDefault();$('stage').classList.remove('drag')})});
+$('stage').addEventListener('drop',function(e){var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadFile(f)});
+
+/* ---------- التشغيل ---------- */
+function setPlayIcon(){
+  var playing=mode==='sample'||(!video.paused&&!video.ended);
+  $('play').innerHTML=playing?ICON_PAUSE:ICON_PLAY;
+}
+$('play').addEventListener('click',function(){
+  if(mode!=='video'){msg('ده مثال تجريبي بيتحرك لوحده. ارفع فيديو عشان تتحكم في التشغيل.');return}
+  ensureAudio();
+  var dur=video.duration;
+  if(video.paused||video.ended){
+    if(video.currentTime<P.start*dur||video.currentTime>=P.end*dur-0.05) video.currentTime=P.start*dur;
+    video.playbackRate=P.speed; video.play();
+  }else video.pause();
+  setPlayIcon();
+});
+video.addEventListener('play',setPlayIcon);video.addEventListener('pause',setPlayIcon);
+$('scrub').addEventListener('pointerdown',function(){scrubbing=true});
+window.addEventListener('pointerup',function(){scrubbing=false});
+$('scrub').addEventListener('input',function(){
+  if(mode!=='video')return;
+  video.currentTime=(+$('scrub').value/1000)*video.duration;dirty=true;
+});
+$('compare').addEventListener('click',function(){
+  comparing=!comparing;$('compare').setAttribute('aria-pressed',String(comparing));dirty=true;
+});
+$('snap').addEventListener('click',function(){
+  out.toBlob(function(b){
+    if(!b){msg('تعذّر أخذ اللقطة.');return}
+    if(!dl){anchorSave(b,'kadr-frame.png');msg('تم بدء تحميل اللقطة.');return}
+    dl.save({filename:'kadr-frame.png',data:b}).then(function(){msg('تم حفظ اللقطة.')},function(e){if(!e||e.code!=='declined')msg('تعذّر حفظ اللقطة.')});
+  },'image/png');
+});
+
+/* ---------- الاختيار من الفيديو ---------- */
+function setPick(on){
+  pickMode=on;$('stage').classList.toggle('pick',on);$('pickhint').hidden=!on;
+  $('pickBtn').setAttribute('aria-pressed',String(on));
+}
+$('pickBtn').addEventListener('click',function(){setPick(!pickMode)});
+$('autoBtn').addEventListener('click',function(){pickReq='corners';dirty=true;if(comparing){comparing=false;$('compare').setAttribute('aria-pressed','false')}});
+out.addEventListener('pointerdown',function(e){
+  if(!pickMode)return;
+  var r=out.getBoundingClientRect();
+  pickReq={x:(e.clientX-r.left)/r.width*out.width,y:(e.clientY-r.top)/r.height*out.height};
+  dirty=true;
+});
+
+/* ---------- التبويبات والتحكمات ---------- */
+var tabs=Array.prototype.slice.call(document.querySelectorAll('.tab'));
+tabs.forEach(function(t){
+  t.addEventListener('click',function(){
+    tabs.forEach(function(x){
+      var on=x===t;x.setAttribute('aria-selected',String(on));
+      $(x.getAttribute('aria-controls')).hidden=!on;
+    });
+  });
+  t.addEventListener('keydown',function(e){
+    var i=tabs.indexOf(t),n=null;
+    if(e.key==='ArrowLeft')n=tabs[(i+1)%tabs.length];
+    if(e.key==='ArrowRight')n=tabs[(i-1+tabs.length)%tabs.length];
+    if(n){n.focus();n.click();e.preventDefault()}
+  });
+});
+document.querySelectorAll('.seg').forEach(function(seg){
+  seg.addEventListener('click',function(e){
+    var b=e.target.closest('button[data-v]');if(!b)return;
+    setSeg(seg.id,b.dataset.v);read();updateOutputs();
+  });
+});
+$('tools').addEventListener('input',function(e){
+  var id=e.target.id;
+  if(id==='tStart'&&+$('tStart').value>+$('tEnd').value-10) $('tStart').value=+$('tEnd').value-10;
+  if(id==='tEnd'&&+$('tEnd').value<+$('tStart').value+10) $('tEnd').value=+$('tStart').value+10;
+  if(id==='tStart'||id==='tEnd'){
+    if(mode==='video'){var dur=video.duration;video.currentTime=(+e.target.value/1000)*dur}
+  }
+  read();updateOutputs();
+  if(/^(bright|contrast|sat|warm|vig)$/.test(id)) markPreset(null);
+});
+$('tools').addEventListener('change',function(){read()});
+$('bgFile').addEventListener('change',function(e){
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  if(bgImgUrl)URL.revokeObjectURL(bgImgUrl);
+  bgImgUrl=URL.createObjectURL(f);
+  var im=new Image();im.onload=function(){bgImg=im;dirty=true};im.src=bgImgUrl;
+});
+
+var PRESETS={
+  orig:{bright:0,contrast:0,sat:0,warm:0,vig:0,mono:0,sepia:0},
+  cine:{bright:-4,contrast:20,sat:-10,warm:10,vig:35,mono:0,sepia:0},
+  warm:{bright:4,contrast:6,sat:12,warm:30,vig:10,mono:0,sepia:0},
+  cool:{bright:0,contrast:8,sat:-4,warm:-30,vig:0,mono:0,sepia:0},
+  bw:{bright:0,contrast:14,sat:0,warm:0,vig:20,mono:1,sepia:0},
+  sepia:{bright:2,contrast:8,sat:0,warm:0,vig:28,mono:0,sepia:.85},
+  vivid:{bright:3,contrast:10,sat:45,warm:0,vig:0,mono:0,sepia:0}
+};
+function markPreset(p){document.querySelectorAll('#presets .chip').forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.p===p))});if(p===null){}}
+$('presets').addEventListener('click',function(e){
+  var c=e.target.closest('.chip');if(!c)return;
+  var p=PRESETS[c.dataset.p];
+  ['bright','contrast','sat','warm'].forEach(function(k){$(k).value=p[k]});
+  $('vig').value=p.vig;
+  P.mono=p.mono;P.sepia=p.sepia;
+  markPreset(c.dataset.p);read();updateOutputs();
+});
+
+/* ---------- التصدير ---------- */
+function setExportUI(on){
+  $('exportbar').classList.toggle('exporting',on);
+  $('export').hidden=on;$('cancel').hidden=!on;$('bar').hidden=!on;
+  if(!on)$('barfill').style.width='0';
+}
+function seekTo(t){
+  return new Promise(function(res){
+    if(Math.abs(video.currentTime-t)<0.01){res();return}
+    var h=function(){video.removeEventListener('seeked',h);res()};
+    video.addEventListener('seeked',h);video.currentTime=t;setTimeout(res,1500);
+  });
+}
+async function startExport(){
+  if(mode!=='video'){msg('ارفع فيديو الأول، المثال التجريبي مش بيتصدّر.');return}
+  if(exporting)return;
+  if(!window.MediaRecorder||!out.captureStream){msg('المتصفح ده مش بيدعم التصدير. جرّب Chrome أو Edge أو Safari حديث.');return}
+  var mimes=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  exportMime=mimes.filter(function(m){return MediaRecorder.isTypeSupported(m)})[0]||'';
+  exporting=true;finishing=false;exportCancelled=false;setExportUI(true);msg('');
+  comparing=false;$('compare').setAttribute('aria-pressed','false');
+  ensureAudio();video.pause();
+  if(spkGain)spkGain.gain.value=0;
+  var dur=video.duration;
+  await seekTo(P.start*dur);
+  render();
+  var stream=out.captureStream(30);
+  if(dest)dest.stream.getAudioTracks().forEach(function(t){stream.addTrack(t)});
+  var px=out.width*out.height,vb=Math.min(40e6,Math.max(4e6,px*30*0.1));
+  var opts={videoBitsPerSecond:vb};if(exportMime)opts.mimeType=exportMime;
+  try{rec=new MediaRecorder(stream,opts)}catch(e){exporting=false;setExportUI(false);msg('تعذّر بدء التسجيل في المتصفح ده.');return}
+  chunks=[];
+  rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
+  rec.onstop=onRecStop;
+  video.playbackRate=P.speed;
+  try{await video.play()}catch(e){}
+  rec.start(300);
+  setPlayIcon();
+}
+function finishExport(cancel){
+  if(!exporting||finishing)return;
+  finishing=true;exportCancelled=!!cancel;video.pause();
+  if(rec&&rec.state!=='inactive')rec.stop();else onRecStop();
+}
+function onRecStop(){
+  var w=out.width,h=out.height;
+  exporting=false;finishing=false;
+  if(spkGain)spkGain.gain.value=1;
+  setExportUI(false);
+  var type=(exportMime.split(';')[0])||'video/webm';
+  if(!exportCancelled&&chunks.length){
+    var blob=new Blob(chunks,{type:type});
+    showResult(blob,/mp4/.test(type)?'mp4':'webm',w,h);
+    msg('خلص التصدير.');
+  }else if(exportCancelled){msg('اتلغى التصدير.')}
+  chunks=[];
+  if(mode==='video')video.currentTime=P.start*video.duration;
+  dirty=true;setPlayIcon();
+}
+function showResult(blob,ext,w,h){
+  if(resUrl)URL.revokeObjectURL(resUrl);
+  resBlob=blob;resExt=ext;resUrl=URL.createObjectURL(blob);
+  $('resVideo').src=resUrl;
+  $('resInfo').textContent=w+'×'+h+' · '+(blob.size/1048576).toFixed(1)+' MB · '+ext.toUpperCase();
+  $('result').hidden=false;
+  $('resSave').hidden=false;
+  try{$('result').scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){}
+}
+$('export').addEventListener('click',startExport);
+$('cancel').addEventListener('click',function(){finishExport(true)});
+$('resClose').addEventListener('click',function(){
+  $('result').hidden=true;$('resVideo').removeAttribute('src');$('resVideo').load();
+  if(resUrl){URL.revokeObjectURL(resUrl);resUrl=null}resBlob=null;
+});
+function anchorSave(blob,name){
+  var u=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(u)},4000);
+}
+$('resSave').addEventListener('click',function(){
+  if(!resBlob)return;
+  var name='kadr-'+Date.now()+'.'+resExt;
+  if(!dl){anchorSave(resBlob,name);msg('تم بدء التحميل.');return}
+  dl.save({filename:name,data:resBlob}).then(
+    function(){msg('تم حفظ الفيديو.')},
+    function(e){if(!e||e.code!=='declined')msg('تعذّر الحفظ. اضغط مطولاً على الفيديو فوق وحمّله من هناك.')}
+  );
+});
+try{
+  if(window.claude&&window.claude.use){
+    window.claude.use('downloads').then(function(d){dl=d;}).catch(function(){});
+  }
+}catch(e){}
+
+/* ---------- حلقة الرسم ---------- */
+function tick(){
+  requestAnimationFrame(tick);
+  var now=performance.now();
+  if(mode==='sample'){render()}
+  else{
+    var playing=!video.paused&&!video.ended;
+    if(playing){
+      var dur=video.duration,end=P.end*dur;
+      if(video.currentTime>=end-0.03){
+        if(exporting)finishExport(false);
+        else if(P.loop)video.currentTime=P.start*dur;
+        else{video.pause();video.currentTime=P.start*dur;setPlayIcon()}
+      }
+    }
+    if(playing||dirty||exporting)render();
+    if(now-lastUi>90){
+      lastUi=now;
+      var d2=video.duration||0,c=video.currentTime||0;
+      if(!scrubbing&&d2)$('scrub').value=Math.round(c/d2*1000);
+      $('time').textContent=fmt(c)+' / '+fmt(d2);
+      if(exporting&&d2){
+        var span=(P.end-P.start)*d2||1;
+        $('barfill').style.width=Math.max(0,Math.min(100,(c-P.start*d2)/span*100))+'%';
+      }
+    }
+  }
+}
+if(document.fonts&&document.fonts.load){document.fonts.load('700 32px Cairo').then(function(){dirty=true}).catch(function(){})}
+read();updateOutputs();setPlayIcon();
+requestAnimationFrame(tick);
+})();
+</script>
+
+</body>
+</html>
